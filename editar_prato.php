@@ -1,125 +1,98 @@
 <?php
+<<<<<<< HEAD
 link rel="stylesheet" href="css/style.css">
 require_once "conexao.php";
+=======
+>>>>>>> 5f2d3c9196806b54cd23ea1a4b8bac5b731d67da
 
-$id = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
+require_once __DIR__ . "/config/conexao.php";
 
-if (!$id) {
-    header("Location: index.php");
-    exit;
+if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+
+    die("ID do prato inválido.");
+
 }
 
-$erro = "";
+$id = (int) $_GET["id"];
 
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-$stmt = $conn->prepare(
-    "SELECT id_prato, nome, descricao, preco, categoria, id_usuario
-     FROM pratos
-     WHERE id_prato = ?"
-);
+    $nome = trim($_POST["nome"]);
+    $descricao = trim($_POST["descricao"]);
+    $preco = $_POST["preco"];
+    $categoria = trim($_POST["categoria"]);
+    $usuario_id = $_POST["usuario_id"];
 
+    if (
+        empty($nome) ||
+        empty($descricao) ||
+        empty($preco) ||
+        empty($categoria) ||
+        empty($usuario_id)
+    ) {
+        die("Erro: preencha todos os campos obrigatórios.");
+    }
+
+    if (!is_numeric($preco) || $preco < 0) {
+        die("Erro: informe um preço válido.");
+    }
+
+    $sql = "UPDATE pratos
+            SET nome = ?,
+                descricao = ?,
+                preco = ?,
+                categoria = ?,
+                usuario_id = ?
+            WHERE id = ?";
+
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+        die("Erro ao preparar a consulta: " . $conn->error);
+    }
+
+    $stmt->bind_param(
+        "ssdsii",
+        $nome,
+        $descricao,
+        $preco,
+        $categoria,
+        $usuario_id,
+        $id
+    );
+
+    if ($stmt->execute()) {
+        header("Location: pratos.php");
+        exit;
+    } else {
+
+        echo "Erro ao atualizar o prato: "
+            . htmlspecialchars($stmt->error);
+
+    }
+
+    $stmt->close();
+
+}
+
+$sql = "SELECT id, nome, descricao, preco, categoria, usuario_id FROM pratos WHERE id = ?";
+
+$stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $id);
 $stmt->execute();
-
 $resultado = $stmt->get_result();
-$prato = $resultado->fetch_assoc();
 
-$stmt->close();
-
-if (!$prato) {
+if ($resultado->num_rows == 0) {
     die("Prato não encontrado.");
 }
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+$prato = $resultado->fetch_assoc();
+$stmt->close();
 
-    $nome = trim($_POST["nome"] ?? "");
-    $descricao = trim($_POST["descricao"] ?? "");
-    $preco = trim($_POST["preco"] ?? "");
-    $categoria = trim($_POST["categoria"] ?? "");
-    $id_usuario = (int)($_POST["id_usuario"] ?? 0);
+$sql_usuarios = "SELECT id, nome FROM usuarios ORDER BY nome";
 
-    if (
-        $nome === "" ||
-        $descricao === "" ||
-        $preco === "" ||
-        $categoria === "" ||
-        $id_usuario <= 0
-    ) {
-        $erro = "Preencha todos os campos obrigatórios.";
+$resultado_usuarios = $conn->query($sql_usuarios);
 
-    } elseif (!is_numeric($preco) || (float)$preco < 0) {
-        $erro = "Digite um preço válido.";
-
-    } else {
-
-        $preco = (float)$preco;
-
-        $stmt = $conn->prepare(
-            "UPDATE pratos
-             SET nome = ?,
-                 descricao = ?,
-                 preco = ?,
-                 categoria = ?,
-                 id_usuario = ?
-             WHERE id_prato = ?"
-        );
-
-        $stmt->bind_param(
-            "ssd sii",
-            $nome,
-            $descricao,
-            $preco,
-            $categoria,
-            $id_usuario,
-            $id
-        );
-
-        $stmt->close();
-
-        $stmt = $conn->prepare(
-            "UPDATE pratos
-             SET nome = ?,
-                 descricao = ?,
-                 preco = ?,
-                 categoria = ?,
-                 id_usuario = ?
-             WHERE id_prato = ?"
-        );
-
-        $stmt->bind_param(
-            "ssdsii",
-            $nome,
-            $descricao,
-            $preco,
-            $categoria,
-            $id_usuario,
-            $id
-        );
-
-        if ($stmt->execute()) {
-            $stmt->close();
-
-            header("Location: index.php?sucesso=1");
-            exit;
-        }
-
-        $erro = "Erro ao atualizar o prato.";
-
-        $stmt->close();
-    }
-
-    $prato["nome"] = $nome;
-    $prato["descricao"] = $descricao;
-    $prato["preco"] = $preco;
-    $prato["categoria"] = $categoria;
-    $prato["id_usuario"] = $id_usuario;
-}
-
-$usuarios = $conn->query(
-    "SELECT id_usuario, nome
-     FROM usuarios
-     ORDER BY nome"
-);
 ?>
 
 <!DOCTYPE html>
@@ -128,157 +101,68 @@ $usuarios = $conn->query(
 <head>
 
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Editar Prato</title>
-
-    <link rel="stylesheet" href="style.css">
 
 </head>
 
 <body>
 
-<header>
+    <h1>Editar Prato</h1>
 
-    <h1>Sistema de Pratos</h1>
+    <form action="editar_prato.php?id=<?= $prato["id"] ?>" method="POST" >
 
-    <nav>
+        <label for="nome"> Nome do prato: </label>
+        <br>
 
-        <a href="index.php">Início</a>
+        <input type="text" id="nome" name="nome" value="<?= htmlspecialchars($prato["nome"]) ?>" required >
+        <br><br>
 
-        <a href="cadastrar_usuario.php">
-            Cadastrar Usuário
-        </a>
+        <label for="descricao"> Descrição: </label>
+        <br>
 
-        <a href="cadastrar_prato.php">
-            Cadastrar Prato
-        </a>
+        <textarea id="descricao" name="descricao" required><?= htmlspecialchars($prato["descricao"]) ?></textarea>
+        <br><br>
 
-        <a href="pratos_usuario.php">
-            Pratos por Usuário
-        </a>
+        <label for="preco"> Preço: </label>
+        <br>
 
-    </nav>
+        <input type="number" id="preco" name="preco" step="0.01" min="0" value="<?= $prato["preco"] ?>" required>
+        <br><br>
 
-</header>
+        <label for="categoria"> Categoria:</label>
+        <br>
 
-<main class="container pequeno">
+        <input type="text" id="categoria" name="categoria" value="<?= htmlspecialchars($prato["categoria"]) ?>" required>
+        <br><br>
 
-    <div class="card">
+        <label for="usuario_id"> Usuário responsável:</label>
+        <br>
 
-        <h2>Editar prato</h2>
+        <select id="usuario_id" name="usuario_id" required>
 
-        <p>
-            Altere as informações do prato abaixo.
-        </p>
+            <?php while ($usuario = $resultado_usuarios->fetch_assoc()): ?>
 
-        <?php if ($erro !== ""): ?>
+                <option value="<?= $usuario["id"] ?>" <?= ($usuario["id"] == $prato["usuario_id"]) ? "selected" : "" ?>>
+                    <?= htmlspecialchars($usuario["nome"]) ?>
+                </option>
 
-            <div class="mensagem erro">
+            <?php endwhile; ?>
 
-                <?= htmlspecialchars($erro) ?>
+        </select>
+        <br><br>
 
-            </div>
+        <button type="submit"> Salvar alterações </button>
 
-        <?php endif; ?>
+    </form>
 
-        <form method="POST">
+    <br>
 
-            <label for="nome">
-                Nome do prato *
-            </label>
-
-            <input
-                type="text"
-                id="nome"
-                name="nome"
-                required
-                value="<?= htmlspecialchars($prato["nome"]) ?>"
-            >
-
-            <label for="descricao">
-                Descrição *
-            </label>
-
-            <textarea
-                id="descricao"
-                name="descricao"
-                rows="4"
-                required
-            ><?= htmlspecialchars($prato["descricao"]) ?></textarea>
-
-            <label for="preco">
-                Preço *
-            </label>
-
-            <input
-                type="number"
-                id="preco"
-                name="preco"
-                step="0.01"
-                min="0"
-                required
-                value="<?= htmlspecialchars($prato["preco"]) ?>"
-            >
-
-            <label for="categoria">
-                Categoria *
-            </label>
-
-            <input
-                type="text"
-                id="categoria"
-                name="categoria"
-                required
-                value="<?= htmlspecialchars($prato["categoria"]) ?>"
-            >
-
-            <label for="id_usuario">
-                Usuário responsável *
-            </label>
-
-            <select
-                id="id_usuario"
-                name="id_usuario"
-                required
-            >
-
-                <?php while ($usuario = $usuarios->fetch_assoc()): ?>
-
-                    <option
-                        value="<?= $usuario["id_usuario"] ?>"
-                        <?= $prato["id_usuario"] == $usuario["id_usuario"] ? "selected" : "" ?>
-                    >
-
-                        <?= htmlspecialchars($usuario["nome"]) ?>
-
-                    </option>
-
-                <?php endwhile; ?>
-
-            </select>
-
-            <button
-                class="botao"
-                type="submit"
-            >
-                Salvar alterações
-            </button>
-
-            <a
-                class="botao secundario"
-                href="index.php"
-            >
-                Cancelar
-            </a>
-
-        </form>
-
-    </div>
-
-</main>
+    <a href="pratos.php"> Voltar para os pratos</a>
 
 </body>
-
 </html>
+
+<?php
+$conn->close();
+?>

@@ -6,6 +6,7 @@ require_once "conexao.php";
 $erro = "";
 $sucesso = "";
 
+// Busca os usuários cadastrados
 $usuarios = $conn->query(
     "SELECT id_usuario, nome
      FROM usuarios
@@ -14,65 +15,110 @@ $usuarios = $conn->query(
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $nome = trim($_POST["nome"] ?? "");
-    $descricao = trim($_POST["descricao"] ?? "");
-    $preco = trim($_POST["preco"] ?? "");
-    $categoria = trim($_POST["categoria"] ?? "");
-    $id_usuario = (int)($_POST["id_usuario"] ?? 0);
+    // Recebe os dados do formulário
+    $nome = trim($_POST["nome"]);
+    $descricao = trim($_POST["descricao"]);
+    $preco = $_POST["preco"];
+    $categoria = trim($_POST["categoria"]);
+    $usuario_id = $_POST["usuario_id"];
 
-  
+    // Validação dos campos
     if (
-        $nome === "" ||
-        $descricao === "" ||
-        $preco === "" ||
-        $categoria === "" ||
-        $id_usuario <= 0
+        empty($nome) ||
+        empty($descricao) ||
+        empty($preco) ||
+        empty($categoria) ||
+        empty($usuario_id)
     ) {
 
-        $erro = "Preencha todos os campos obrigatórios.";
+        die("Erro: preencha todos os campos obrigatórios.");
 
-    } elseif (!is_numeric($preco) || $preco < 0) {
+    }
 
-        $erro = "Digite um preço válido.";
+    // Verifica se o preço é válido
+    if (!is_numeric($preco) || $preco < 0) {
+
+        die("Erro: informe um preço válido.");
+
+    }
+
+    // Prepared Statement
+    $sql = "INSERT INTO pratos 
+            (nome, descricao, preco, categoria, usuario_id)
+            VALUES (?, ?, ?, ?, ?)";
+
+    // Prepara a consulta
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+
+        die("Erro ao preparar a consulta: " . $conn->error);
+
+    }
+
+    // Associa os valores
+    //
+    // s = string
+    // s = string
+    // d = decimal
+    // s = string
+    // i = inteiro
+    //
+    $stmt->bind_param(
+        "ssdsi",
+        $nome,
+        $descricao,
+        $preco,
+        $categoria,
+        $usuario_id
+    );
+
+    // Executa
+    if ($stmt->execute()) {
+
+        echo "<h2>Prato cadastrado com sucesso!</h2>";
+
+        echo "<p><strong>Prato:</strong> "
+            . htmlspecialchars($nome)
+            . "</p>";
+
+        echo "<p><strong>Preço:</strong> R$ "
+            . number_format($preco, 2, ",", ".")
+            . "</p>";
+
+        echo "<p><strong>Categoria:</strong> "
+            . htmlspecialchars($categoria)
+            . "</p>";
+
+        echo "<br>";
+
+        echo "<a href='cadastrar_prato.php'>Cadastrar outro prato</a>";
+
+        echo "<br><br>";
+
+        echo "<a href='index.php'>Voltar para o início</a>";
 
     } else {
 
-        $preco = (float)$preco;
+        echo "<h2>Erro ao cadastrar prato.</h2>";
 
-     
-        $stmt = $conn->prepare(
-            "INSERT INTO pratos
-            (nome, descricao, preco, categoria, id_usuario)
-            VALUES (?, ?, ?, ?, ?)"
-        );
+        echo "<p>"
+            . htmlspecialchars($stmt->error)
+            . "</p>";
 
-        $stmt->bind_param(
-            "ssdsi",
-            $nome,
-            $descricao,
-            $preco,
-            $categoria,
-            $id_usuario
-        );
-
-        if ($stmt->execute()) {
-
-            $sucesso = "Prato cadastrado com sucesso!";
-
-           
-            $nome = "";
-            $descricao = "";
-            $preco = "";
-            $categoria = "";
-
-        } else {
-
-            $erro = "Erro ao cadastrar o prato.";
-        }
-
-        $stmt->close();
     }
+
+    $stmt->close();
+
+    $conn->close();
+
+    exit;
 }
+
+// Busca os usuários cadastrados
+$sql_usuarios = "SELECT id, nome FROM usuarios ORDER BY nome";
+
+$resultado_usuarios = $conn->query($sql_usuarios);
 
 ?>
 
@@ -83,164 +129,132 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Cadastrar Prato</title>
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
 
 </head>
 
 <body>
 
-<main class="container pequeno">
+    <h1>Cadastrar Prato</h1>
 
-    <div class="card">
+    <form action="cadastrar_prato.php" method="POST">
 
-        <h2>Cadastrar Prato</h2>
+        <label for="nome">
+            Nome do prato:
+        </label>
 
-        <p>
-            Preencha os dados do prato.
-        </p>
+        <br>
 
-        <?php if ($erro !== ""): ?>
+        <input
+            type="text"
+            id="nome"
+            name="nome"
+            required
+        >
 
-            <div class="mensagem erro">
-
-                <?= htmlspecialchars($erro) ?>
-
-            </div>
-
-        <?php endif; ?>
-
-
-        <?php if ($sucesso !== ""): ?>
-
-            <div class="mensagem sucesso">
-
-                <?= htmlspecialchars($sucesso) ?>
-
-            </div>
-
-        <?php endif; ?>
+        <br><br>
 
 
-        <?php if ($usuarios->num_rows === 0): ?>
+        <label for="descricao">
+            Descrição:
+        </label>
 
-            <div class="mensagem erro">
+        <br>
 
-                É necessário cadastrar um usuário antes
-                de cadastrar um prato.
+        <textarea
+            id="descricao"
+            name="descricao"
+            required
+        ></textarea>
 
-            </div>
-
-        <?php else: ?>
-
-            <form method="POST">
-
-                <label for="nome">
-                    Nome do prato *
-                </label>
-
-                <input
-                    type="text"
-                    id="nome"
-                    name="nome"
-                    required
-                    value="<?= htmlspecialchars($nome ?? "") ?>"
-                >
+        <br><br>
 
 
-                <label for="descricao">
-                    Descrição *
-                </label>
+        <label for="preco">
+            Preço:
+        </label>
 
-                <textarea
-                    id="descricao"
-                    name="descricao"
-                    rows="4"
-                    required
-                ><?= htmlspecialchars($descricao ?? "") ?></textarea>
+        <br>
 
+        <input
+            type="number"
+            id="preco"
+            name="preco"
+            step="0.01"
+            min="0"
+            required
+        >
 
-                <label for="preco">
-                    Preço *
-                </label>
-
-                <input
-                    type="number"
-                    id="preco"
-                    name="preco"
-                    step="0.01"
-                    min="0"
-                    required
-                    value="<?= htmlspecialchars($preco ?? "") ?>"
-                >
+        <br><br>
 
 
-                <label for="categoria">
-                    Categoria *
-                </label>
+        <label for="categoria">
+            Categoria:
+        </label>
 
-                <input
-                    type="text"
-                    id="categoria"
-                    name="categoria"
-                    required
-                    value="<?= htmlspecialchars($categoria ?? "") ?>"
-                >
+        <br>
 
+        <input
+            type="text"
+            id="categoria"
+            name="categoria"
+            required
+        >
 
-                <label for="id_usuario">
-                    Usuário responsável *
-                </label>
-
-                <select
-                    id="id_usuario"
-                    name="id_usuario"
-                    required
-                >
-
-                    <option value="">
-                        Selecione o usuário
-                    </option>
-
-                    <?php while ($usuario = $usuarios->fetch_assoc()): ?>
-
-                        <option
-                            value="<?= $usuario["id_usuario"] ?>"
-                        >
-
-                            <?= htmlspecialchars($usuario["nome"]) ?>
-
-                        </option>
-
-                    <?php endwhile; ?>
-
-                </select>
+        <br><br>
 
 
-                <button
-                    class="botao"
-                    type="submit"
-                >
-                    Cadastrar Prato
-                </button>
+        <label for="usuario_id">
+            Usuário responsável:
+        </label>
 
-            </form>
+        <br>
 
-        <?php endif; ?>
+        <select
+            id="usuario_id"
+            name="usuario_id"
+            required
+        >
 
-    </div>
+            <option value="">
+                Selecione um usuário
+            </option>
 
-</main>
+            <?php while ($usuario = $resultado_usuarios->fetch_assoc()): ?>
+
+                <option value="<?= $usuario['id'] ?>">
+
+                    <?= htmlspecialchars($usuario['nome']) ?>
+
+                </option>
+
+            <?php endwhile; ?>
+
+        </select>
+
+        <br><br>
+
+
+        <button type="submit">
+            Cadastrar Prato
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="index.php">
+        Voltar para o início
+    </a>
 
 </body>
 
 </html>
+
+<?php
+
+$conn->close();
+
+?>
