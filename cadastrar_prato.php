@@ -1,11 +1,11 @@
 <?php
+link rel="stylesheet" href="css /style.css">
 
 require_once "conexao.php";
 
 $erro = "";
 $sucesso = "";
 
-// Busca os usuários cadastrados
 $usuarios = $conn->query(
     "SELECT id_usuario, nome
      FROM usuarios

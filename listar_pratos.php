@@ -1,5 +1,5 @@
 <?php
-
+link rel="stylesheet" href="css/style.css">
 require_once "conexao.php";
 
 $id_usuario = $_GET["id_usuario"] ?? "";
@@ -89,7 +89,7 @@ if ($id_usuario !== "" && is_numeric($id_usuario)) {
 
     <link
         rel="stylesheet"
-        href="style.css"
+        href="css/style.css"
     >
 
 </head>

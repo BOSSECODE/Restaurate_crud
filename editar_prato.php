@@ -1,4 +1,5 @@
 <?php
+link rel="stylesheet" href="css/style.css">
 require_once "conexao.php";
 
 $id = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
