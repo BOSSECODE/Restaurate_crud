@@ -6,7 +6,6 @@ require_once "conexao.php";
 $erro = "";
 $sucesso = "";
 
-// Busca os usuários cadastrados
 $usuarios = $conn->query(
     "SELECT id_usuario, nome
      FROM usuarios
@@ -15,14 +14,12 @@ $usuarios = $conn->query(
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    // Recebe os dados do formulário
     $nome = trim($_POST["nome"]);
     $descricao = trim($_POST["descricao"]);
     $preco = $_POST["preco"];
     $categoria = trim($_POST["categoria"]);
     $usuario_id = $_POST["usuario_id"];
 
-    // Validação dos campos
     if (
         empty($nome) ||
         empty($descricao) ||
@@ -35,19 +32,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     }
 
-    // Verifica se o preço é válido
     if (!is_numeric($preco) || $preco < 0) {
 
         die("Erro: informe um preço válido.");
 
     }
 
-    // Prepared Statement
     $sql = "INSERT INTO pratos 
             (nome, descricao, preco, categoria, usuario_id)
             VALUES (?, ?, ?, ?, ?)";
 
-    // Prepara a consulta
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
@@ -56,14 +50,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     }
 
-    // Associa os valores
-    //
-    // s = string
-    // s = string
-    // d = decimal
-    // s = string
-    // i = inteiro
-    //
     $stmt->bind_param(
         "ssdsi",
         $nome,
@@ -73,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $usuario_id
     );
 
-    // Executa
     if ($stmt->execute()) {
 
         echo "<h2>Prato cadastrado com sucesso!</h2>";
@@ -115,7 +100,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit;
 }
 
-// Busca os usuários cadastrados
 $sql_usuarios = "SELECT id, nome FROM usuarios ORDER BY nome";
 
 $resultado_usuarios = $conn->query($sql_usuarios);
@@ -141,86 +125,47 @@ $resultado_usuarios = $conn->query($sql_usuarios);
 
     <form action="cadastrar_prato.php" method="POST">
 
-        <label for="nome">
-            Nome do prato:
-        </label>
+        <label for="nome"> Nome do prato:</label>
 
         <br>
 
-        <input
-            type="text"
-            id="nome"
-            name="nome"
-            required
-        >
+        <input type="text" id="nome" name="nome" required >
+
+        <br><br>
+
+        <label for="descricao"> Descrição:</label>
+
+        <br>
+
+        <textarea id="descricao" name="descricao" required></textarea>
 
         <br><br>
 
 
-        <label for="descricao">
-            Descrição:
-        </label>
+        <label for="preco"> Preço: </label>
 
         <br>
 
-        <textarea
-            id="descricao"
-            name="descricao"
-            required
-        ></textarea>
+        <input type="number" id="preco" name="preco" step="0.01" min="0" required>
+
+        <br><br>
+
+        <label for="categoria"> Categoria:</label>
+
+        <br>
+
+        <input type="text" id="categoria" name="categoria" required>
 
         <br><br>
 
 
-        <label for="preco">
-            Preço:
-        </label>
+        <label for="usuario_id"> Usuário responsável:</label>
 
         <br>
 
-        <input
-            type="number"
-            id="preco"
-            name="preco"
-            step="0.01"
-            min="0"
-            required
-        >
+        <select id="usuario_id" name="usuario_id" required >
 
-        <br><br>
-
-
-        <label for="categoria">
-            Categoria:
-        </label>
-
-        <br>
-
-        <input
-            type="text"
-            id="categoria"
-            name="categoria"
-            required
-        >
-
-        <br><br>
-
-
-        <label for="usuario_id">
-            Usuário responsável:
-        </label>
-
-        <br>
-
-        <select
-            id="usuario_id"
-            name="usuario_id"
-            required
-        >
-
-            <option value="">
-                Selecione um usuário
-            </option>
+            <option value=""> Selecione um usuário </option>
 
             <?php while ($usuario = $resultado_usuarios->fetch_assoc()): ?>
 
@@ -236,18 +181,13 @@ $resultado_usuarios = $conn->query($sql_usuarios);
 
         <br><br>
 
-
-        <button type="submit">
-            Cadastrar Prato
-        </button>
+        <button type="submit">Cadastrar Prato</button>
 
     </form>
 
     <br>
 
-    <a href="index.php">
-        Voltar para o início
-    </a>
+    <a href="index.php"> Voltar para o início</a>
 
 </body>
 
